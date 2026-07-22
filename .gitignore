@@ -1,0 +1,9 @@
+.env
+backend/.env
+ml-service/.env
+node_modules/
+__pycache__/
+*.pyc
+ml-service/models/*.joblib
+*.log
+.DS_Store

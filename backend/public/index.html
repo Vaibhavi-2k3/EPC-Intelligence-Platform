@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPC Intelligence Platform</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="epc-root">
+    <div class="epc-titleblock">
+      <div>
+        <p class="epc-h1">EPC Intelligence Platform</p>
+        <p class="epc-sub">DATA CENTRE PROJECT DELIVERY — KNOWLEDGE &amp; COMPLIANCE LAYER</p>
+      </div>
+      <div class="epc-meta">
+        <div><span class="lbl">Project</span><span>HYD-DC-04 · TIER III</span></div>
+        <div><span class="lbl">Docs Indexed</span><span id="epcDocCount">—</span></div>
+        <div><span class="lbl">Rev</span><span>A · Demo Build</span></div>
+      </div>
+    </div>
+
+    <div class="epc-tabs">
+      <div class="epc-tab active" data-tab="rag">01 · Knowledge Copilot</div>
+      <div class="epc-tab" data-tab="compliance">02 · Compliance Check</div>
+      <div class="epc-tab" data-tab="schedule">03 · Schedule Risk</div>
+    </div>
+
+    <div class="epc-panel">
+      <div class="epc-panel-inner" id="epcPanelRag">
+        <div class="epc-grid2">
+          <div>
+            <span class="epc-label">Project Document Corpus (indexed)</span>
+            <div class="epc-doclist" id="epcDocList">
+              <div class="epc-empty">Loading document corpus…</div>
+            </div>
+          </div>
+          <div>
+            <span class="epc-label">Ask the project</span>
+            <textarea class="epc-textarea" id="epcQuestion" placeholder="e.g. What is the runtime requirement for the UPS system, and has it been challenged in any RFI?"></textarea>
+            <button class="epc-btn" id="epcAskBtn">Run Query</button>
+            <div id="epcRagResult"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="epc-panel-inner" id="epcPanelCompliance" style="display:none;">
+        <span class="epc-label">Vendor submittal under review</span>
+        <select class="epc-select" id="epcSubmittalSelect"></select>
+        <div style="height:12px;"></div>
+        <button class="epc-btn" id="epcCheckBtn">Run Compliance Check</button>
+        <button class="epc-btn secondary" id="epcResetBtn" style="display:none;">Check Another Submittal</button>
+        <div id="epcComplianceResult" style="margin-top:18px;"></div>
+      </div>
+
+      <div class="epc-panel-inner" id="epcPanelSchedule" style="display:none;">
+        <span class="epc-label">Critical path schedule + procurement snapshot</span>
+        <p class="epc-empty" style="margin: 0 0 14px 0;">
+          Live snapshot: TSK-014 → TSK-015 (UPS install, no float) → TSK-021 (integrated
+          systems testing) plus the linked procurement tracker and commissioning
+          crew mobilisation constraint.
+        </p>
+        <button class="epc-btn" id="epcScheduleBtn">Run Schedule Risk Scan</button>
+        <div id="epcScheduleResult" style="margin-top:18px;"></div>
+
+        <div class="epc-whatif">
+          <span class="epc-label">What-If Simulator (ML model only, live)</span>
+          <p class="epc-empty" style="margin: 0 0 14px 0;">
+            Drag any factor to see the trained model's delay probability update instantly —
+            no LLM call, so it's fast enough to explore interactively.
+          </p>
+          <div class="epc-whatif-grid">
+            <div class="epc-whatif-row">
+              <label>Buffer days <span id="epcBufferVal">-9</span></label>
+              <input type="range" id="epcBufferSlider" min="-30" max="30" value="-9" step="1" />
+            </div>
+            <div class="epc-whatif-row">
+              <label>Vendor on-time-delivery rate <span id="epcOtdVal">0.78</span></label>
+              <input type="range" id="epcOtdSlider" min="0.3" max="0.99" value="0.78" step="0.01" />
+            </div>
+            <div class="epc-whatif-row">
+              <label>Task float (days) <span id="epcFloatVal">0</span></label>
+              <input type="range" id="epcFloatSlider" min="0" max="30" value="0" step="1" />
+            </div>
+            <div class="epc-whatif-row">
+              <label>Change orders logged <span id="epcCoVal">1</span></label>
+              <input type="range" id="epcCoSlider" min="0" max="6" value="1" step="1" />
+            </div>
+            <div class="epc-whatif-row">
+              <label>Fixed downstream crew dependency</label>
+              <input type="checkbox" id="epcCrewToggle" checked />
+            </div>
+          </div>
+          <div class="epc-whatif-result">
+            <div class="epc-scorebar">
+              <span>LIVE DELAY PROBABILITY</span>
+              <div class="track"><div class="fill" id="epcWhatifFill" style="width:0%"></div></div>
+              <span id="epcWhatifPct">—</span>
+            </div>
+            <div id="epcWhatifLevel" class="epc-empty">Move a slider to see the model respond.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

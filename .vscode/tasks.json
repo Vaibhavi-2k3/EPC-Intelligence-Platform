@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ML Service: Install deps",
+      "type": "shell",
+      "command": "pip install -r requirements.txt",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ML Service: Train models",
+      "type": "shell",
+      "command": "python train_schedule_model.py && python train_compliance_model.py",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "problemMatcher": [],
+      "dependsOn": ["ML Service: Install deps"]
+    },
+    {
+      "label": "ML Service: Run",
+      "type": "shell",
+      "command": "uvicorn app:app --port 8000 --reload",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "dependsOn": ["ML Service: Train models"]
+    },
+    {
+      "label": "Backend: Install deps",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: Run",
+      "type": "shell",
+      "command": "npm start",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "dependsOn": ["Backend: Install deps"]
+    },
+    {
+      "label": "Run Full Stack (ML Service + Backend)",
+      "dependsOn": ["ML Service: Run", "Backend: Run"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Eval: Compliance classifier test cases",
+      "type": "shell",
+      "command": "python -m eval.eval_compliance",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Eval: Schedule risk monotonicity check",
+      "type": "shell",
+      "command": "python -m eval.eval_schedule_risk",
+      "options": { "cwd": "${workspaceFolder}/ml-service" },
+      "problemMatcher": []
+    }
+  ]
+}
