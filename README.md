@@ -160,15 +160,15 @@ python -m eval.eval_compliance     # precision/recall/F1 on hand-written test ca
 python -m eval.eval_schedule_risk  # checks risk moves the right direction as inputs worsen
 ```
 
-The compliance classifier hits ~100% on the training-style holdout but ~75%
-on the hand-written test cases (different wording than training data) — quote
-the 75%, that's the real number. The schedule model uses monotonic
-constraints specifically so it can't predict "less risk" from a worse input.
+The compliance classifier calls all 16 hand-written test cases correctly
+(different wording than training data) — but n is tiny, so treat that as a
+direction, not a guarantee. The schedule model uses monotonic constraints
+specifically so it can't predict "less risk" from a worse input.
 
 | Model | Type | Test performance |
 |---|---|---|
 | Schedule delay risk | HistGradientBoostingClassifier, monotonic constraints | ~80% acc / 0.84 AUC on split; passes monotonicity check |
-| Deviation severity | TF-IDF + Logistic Regression | ~75% on held-out phrasing |
+| Deviation severity | TF-IDF + Logistic Regression | 16/16 on held-out phrasing (was 12/16 before the data-gen fix — see `data_gen.py` template coverage) |
 
 Both are trained on synthetic data — real EPC delay/deviation datasets aren't
 public. See "Retraining on real data" below before trusting this beyond a demo.

@@ -3,6 +3,27 @@
 
   let DOCS = [];
 
+  // All model/text output is escaped before it is inserted into innerHTML; only
+  // the static <span class="epc-cite"> tags are added afterwards.
+  function esc(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Escapes first, then wraps doc-id citations in a whitelisted cite span.
+  // bracketed=true renders [DOC-ID], otherwise bare DOC-ID refs are matched.
+  function citeText(raw, { bracketed = false } = {}) {
+    const safe = esc(raw);
+    if (bracketed) {
+      return safe.replace(/\[([A-Z0-9-]+)\]/g, '<span class="epc-cite">[$1]</span>');
+    }
+    return safe.replace(/\b([A-Z]+-[A-Z0-9-]+)\b/g, '<span class="epc-cite">$1</span>');
+  }
+
   async function loadDocuments() {
     try {
       const res = await fetch(`${API_BASE}/api/documents`);
@@ -13,7 +34,7 @@
       document.getElementById("epcDocCount").textContent = DOCS.length;
     } catch (err) {
       document.getElementById("epcDocList").innerHTML =
-        `<div class="epc-empty">Could not load documents: ${err.message}. Is the backend running?</div>`;
+        `<div class="epc-empty">Could not load documents: ${esc(err.message)}. Is the backend running?</div>`;
     }
   }
 
@@ -23,7 +44,7 @@
     DOCS.forEach((d) => {
       const div = document.createElement("div");
       div.className = "epc-doc";
-      div.innerHTML = `<span class="tag">${d.id}</span><div class="title">${d.title}</div><div class="desc">${d.desc}</div>`;
+      div.innerHTML = `<span class="tag">${esc(d.id)}</span><div class="title">${esc(d.title)}</div><div class="desc">${esc(d.desc)}</div>`;
       docListEl.appendChild(div);
     });
   }
@@ -74,7 +95,7 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || data.error || "Request failed");
-      const withCites = data.answer.replace(/\[([A-Z0-9\-]+)\]/g, '<span class="epc-cite">$1</span>');
+      const withCites = citeText(data.answer, { bracketed: true });
       resultEl.innerHTML = `<div class="epc-answer">${withCites}</div>`;
     } catch (err) {
       resultEl.innerHTML = `<div class="epc-empty">Query failed: ${err.message}</div>`;
@@ -126,19 +147,21 @@
     </div>`;
     (parsed.findings || []).forEach((f) => {
       const sev = (f.severity || "minor").toLowerCase();
+      const allowedSev = ["critical", "major", "minor", "ok"];
+      const sevClass = allowedSev.includes(sev) ? sev : "minor";
       const mlSev = (f.ml_severity || "").toLowerCase();
       const agrees = mlSev && mlSev === sev;
       const mlBadge = f.ml_severity
         ? `<div class="epc-ml-tag ${agrees ? "agree" : "disagree"}">
-             ML CLASSIFIER: ${f.ml_severity.toUpperCase()} (${Math.round((f.ml_confidence || 0) * 100)}% conf.)
+             ML CLASSIFIER: ${esc(f.ml_severity.toUpperCase())} (${Math.round((f.ml_confidence || 0) * 100)}% conf.)
              ${agrees ? "· agrees with LLM" : "· differs from LLM — review"}
            </div>`
         : "";
       html += `<div class="epc-finding">
-        <span class="epc-sev ${sev}">${sev}</span>
+        <span class="epc-sev ${sevClass}">${esc(sev)}</span>
         <div class="epc-finding-body">
-          <div class="ftitle">${f.title || ""}</div>
-          <div class="fdesc">${(f.detail || "").replace(/\b([A-Z]+-[A-Z0-9\-]+)\b/g, '<span class="epc-cite">$1</span>')}</div>
+          <div class="ftitle">${esc(f.title)}</div>
+          <div class="fdesc">${citeText(f.detail)}</div>
           ${mlBadge}
         </div>
       </div>`;
@@ -178,19 +201,20 @@
     let html = "";
     risks.forEach((r) => {
       const sev = (r.severity || "medium").toLowerCase();
-      const sevClass = sev === "high" ? "major" : sev === "low" ? "minor" : sev;
+      const allowedSev = ["critical", "major", "medium", "minor", "high", "low"];
+      const sevClass = allowedSev.includes(sev) ? (sev === "high" ? "major" : sev === "low" ? "minor" : sev) : "medium";
       const mitigations = (r.mitigations || [])
-        .map((m) => `<li>${m}</li>`)
+        .map((m) => `<li>${esc(m)}</li>`)
         .join("");
       const probPct = typeof r.delay_probability === "number"
         ? `${Math.round(r.delay_probability * 100)}%`
         : null;
       html += `<div class="epc-finding">
-        <span class="epc-sev ${sevClass}">${sev}</span>
+        <span class="epc-sev ${sevClass}">${esc(sev)}</span>
         <div class="epc-finding-body">
-          <div class="ftitle">${r.title || ""} <span class="epc-cite" style="margin-left:6px;">${r.lead_time_days ?? "?"} days lead</span></div>
+          <div class="ftitle">${esc(r.title)} <span class="epc-cite" style="margin-left:6px;">${esc(r.lead_time_days ?? "?")} days lead</span></div>
           ${probPct ? `<div class="epc-ml-tag agree">ML MODEL: ${probPct} predicted delay probability (monotonic gradient boosting)</div>` : ""}
-          <div class="fdesc">${(r.detail || "").replace(/\b([A-Z]+-[A-Z0-9\-]+)\b/g, '<span class="epc-cite">$1</span>')}</div>
+          <div class="fdesc">${citeText(r.detail)}</div>
           ${mitigations ? `<ul class="epc-mitigations">${mitigations}</ul>` : ""}
         </div>
       </div>`;
