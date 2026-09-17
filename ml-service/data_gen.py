@@ -54,28 +54,62 @@ def generate_schedule_training_data(n=1500, seed=42):
 
 
 # Severity vocabulary used to synthesize labeled deviation-description text.
+# Each template is tagged with how the two numbers relate semantically:
+#   a_lt_b  -> a falls short of the required b  (a < b)
+#   a_gt_b  -> a exceeds what b assumed          (a > b)
+#   any     -> no ordering implied (a, b arbitrary)
 _CRITICAL_TEMPLATES = [
-    "submittal offers {a} minutes runtime versus a {b} minute hard minimum required by spec",
-    "proposed unit falls short of the mandatory {b} redundancy level required by spec, offering only {a}",
-    "vendor datasheet shows {a} rating which fails the non-negotiable {b} threshold in the specification",
-    "design life of {a} years is below the required minimum of {b} years with no exception on record",
+    ("a_lt_b", "submittal offers {a} minutes runtime versus a {b} minute hard minimum required by spec"),
+    ("a_lt_b", "proposed unit falls short of the mandatory {b} redundancy level required by spec, offering only {a}"),
+    ("a_lt_b", "vendor datasheet shows {a} rating which fails the non-negotiable {b} threshold in the specification"),
+    ("a_lt_b", "design life of {a} years is below the required minimum of {b} years with no exception on record"),
+    ("a_lt_b", "cooling capacity of {a} kW is far below the {b} kW the zone heat load demands at full IT load"),
+    ("a_lt_b", "fire suppression system is sized for {a} cubic feet but the protected space requires {b}: under-capacity with no waiver"),
+    ("a_lt_b", "uplink capacity of {a} Gbps fails the mandatory {b} Gbps minimum for this service tier"),
+    ("a_lt_b", "battery bank only sustains load for {a} minutes before generator pick-up, well under the {b} minute minimum the specification requires"),
 ]
 _MAJOR_TEMPLATES = [
-    "battery design life stated as {a} years versus {b} year minimum in the specification",
-    "efficiency rating of {a}% is marginally below the {b}% target stated in spec",
-    "submittal lead time of {a} weeks creates schedule pressure against the {b} week buffer assumed in spec",
-    "vendor proposes {a} configuration which partially deviates from the {b} configuration required",
+    ("a_lt_b", "battery design life stated as {a} years versus {b} year minimum in the specification"),
+    ("a_lt_b", "efficiency rating of {a}% is marginally below the {b}% target stated in spec"),
+    ("a_gt_b", "submittal lead time of {a} weeks creates schedule pressure against the {b} week buffer assumed in spec"),
+    ("any", "vendor proposes {a} configuration which partially deviates from the {b} configuration required"),
+    ("a_lt_b", "switchgear bus rating of {a} kA is a bit under the {b} kA short-circuit rating required, fixable with a small upgrade"),
+    ("a_lt_b", "standby generator rated {a} kVA versus the {b} kVA required — close to spec but still short"),
 ]
 _MINOR_TEMPLATES = [
-    "minor labeling inconsistency between submittal drawing and spec nomenclature for {a} versus {b}",
-    "submittal references an older revision ({a}) than the current spec revision ({b}), content otherwise aligned",
-    "cosmetic finish specified as {a} differs slightly from the {b} finish noted in spec appendix",
+    ("any", "minor labeling inconsistency between submittal drawing and spec nomenclature for {a} versus {b}"),
+    ("any", "submittal references an older revision ({a}) than the current spec revision ({b}), content otherwise aligned"),
+    ("any", "cosmetic finish specified as {a} differs slightly from the {b} finish noted in spec appendix"),
+    ("any", "submittal dimension on the layout differs by a few millimetres from the {a} mm nominal ({b} mm shown), no functional impact"),
+    ("any", "drawing title block references {a} while the current document set is revision {b}, content identical"),
+    ("any", "tag on the transmittal form is {a} where the project standard says {b}, easily corrected before issue"),
 ]
 _OK_TEMPLATES = [
-    "configuration of {a} matches the {b} requirement specified exactly, fully conforms",
-    "redundancy level {a} meets or exceeds the {b} minimum required by spec",
-    "vendor submittal for {a} is fully compliant with {b} clause, no deviations found",
+    ("any", "configuration of {a} matches the {b} requirement specified exactly, fully conforms"),
+    ("any", "redundancy level {a} meets or exceeds the {b} minimum required by spec"),
+    ("any", "vendor submittal for {a} is fully compliant with {b} clause, no deviations found"),
+    ("any", "all specified parameters including the {a} and {b} items are confirmed as provided, submittal recommended for approval"),
+    ("any", "vendor confirmed compliance with every clause in the spec; {a} and {b} configurations accepted as-is"),
+    ("any", "proposed {a} matches the required {b} exactly, no deviations, signed and sealed as submitted"),
+    ("any", "capacity, autonomy, and emissions rating all line up with what the specification calls for; submittal ready for approval"),
 ]
+
+# Precedence tiers a number sits in, so pairs read sensibly (e.g. a "7 minute"
+# runtime vs a "12 minute" minimum, never the reverse).
+_LOW_TO_HIGH = [1, 2, 3, 5, 7, 9, 12, 16, 20, 30, 45, 60]
+
+
+def _draw_pair(rng, kind):
+    if kind == "a_lt_b":
+        a = int(rng.choice(_LOW_TO_HIGH[:-2]))
+        b = int(rng.choice(_LOW_TO_HIGH[_LOW_TO_HIGH.index(a) + 1 :]))
+        return a, b
+    if kind == "a_gt_b":
+        b = int(rng.choice(_LOW_TO_HIGH[:-2]))
+        a = int(rng.choice(_LOW_TO_HIGH[_LOW_TO_HIGH.index(b) + 1 :]))
+        return a, b
+    a, b = rng.integers(1, 20, 2)
+    return int(a), int(b)
 
 
 def generate_compliance_training_data(n_per_class=180, seed=7):
@@ -84,9 +118,8 @@ def generate_compliance_training_data(n_per_class=180, seed=7):
     def fill(templates, count):
         rows = []
         for _ in range(count):
-            t = templates[rng.integers(0, len(templates))]
-            a = rng.integers(1, 20)
-            b = rng.integers(1, 20)
+            kind, t = templates[rng.integers(0, len(templates))]
+            a, b = _draw_pair(rng, kind)
             rows.append(t.format(a=a, b=b))
         return rows
 
